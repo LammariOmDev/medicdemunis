@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Médicaments Remboursables</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+
     <style>
         body { 
             padding: 20px; 
@@ -18,35 +21,29 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.1); 
         }
 
-        /* --- TES MODIFICATIONS ICI --- */
-        
-        /* Le Titre principal */
+        /* --- TON STYLE PERSONNALISÉ --- */
         h1 { 
-            margin-bottom: 5px; /* Petit espace sous le titre */
+            margin-bottom: 5px; 
             color: #2c3e50; 
-            font-size: 20px; /* Ta demande : 20px */
+            font-size: 20px; 
             font-weight: bold;
-            text-transform: uppercase; /* Optionnel : met en majuscules pour faire plus pro */
+            text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* La Signature */
         .signature {
-            font-size: 11px; /* Ta demande : 11px */
-            color: #7f8c8d; /* Un gris élégant */
-            margin-bottom: 25px; /* Espace avant le tableau */
+            font-size: 11px; 
+            color: #7f8c8d; 
+            margin-bottom: 25px; 
             font-style: italic;
-            border-bottom: 2px solid #3498db; /* Une petite barre bleue déco */
+            border-bottom: 2px solid #3498db; 
             padding-bottom: 10px;
             display: inline-block;
         }
 
-        /* Style du tableau */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #3498db; color: white; position: sticky; top: 0; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f1f1; transition: 0.2s; }
+        /* Ajustements pour le tableau DataTables */
+        table.dataTable thead { background-color: #3498db; color: white; }
+        .dataTables_wrapper { font-size: 14px; }
         
         #loading { font-size: 18px; color: #666; text-align: center; padding: 20px; }
     </style>
@@ -54,18 +51,30 @@
 <body>
 
 <div class="container">
-    <h1>Médicaments Remboursables pour les plus Démunis</h1>
-    
+    <h1>Médicaments Remboursables et Non Remboursables pour les plus Démunis</h1>
     <div class="signature">By LammariOmDev</div>
 
-    <div id="loading">Chargement des données en cours...</div>
-    <div id="excel-table" class="table-responsive"></div>
+    <div id="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <br>Chargement et traitement des 5000 lignes...
+    </div>
+
+    <div class="table-responsive">
+        <table id="monTableau" class="table table-striped" style="width:100%; display:none;">
+            <thead>
+                <tr id="table-headers"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <script>
-    /* ATTENTION : Vérifie bien que le nom ici correspond à ton fichier Excel sur GitHub */
     const excelFile = 'donnees.xlsx';
 
     async function loadExcel() {
@@ -77,15 +86,56 @@
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // On génère le tableau HTML
-            const htmlTable = XLSX.utils.sheet_to_html(worksheet, { id: "display-table", class: "table table-striped table-hover" });
+            // Conversion en JSON (Objets) au lieu de HTML direct
+            // Cela nous permet de mieux contrôler les données pour la pagination
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
-            document.getElementById('excel-table').innerHTML = htmlTable;
-            document.getElementById('loading').style.display = 'none';
+            if (jsonData.length > 0) {
+                // 1. Créer les en-têtes (La première ligne du Excel)
+                const headers = jsonData[0];
+                const headerRow = document.getElementById('table-headers');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header || "Colonne vide"; // Sécurité si titre vide
+                    headerRow.appendChild(th);
+                });
+
+                // 2. Créer le corps du tableau (Toutes les autres lignes)
+                const body = document.getElementById('table-body');
+                // On commence à i=1 pour sauter la ligne des titres
+                for (let i = 1; i < jsonData.length; i++) {
+                    const rowData = jsonData[i];
+                    // On vérifie que la ligne n'est pas totalement vide
+                    if (rowData.length > 0) {
+                        const tr = document.createElement('tr');
+                        headers.forEach((_, index) => { // On utilise l'index des headers pour aligner les colonnes
+                            const td = document.createElement('td');
+                            // Si la case est vide, on met un texte vide
+                            td.textContent = (rowData[index] !== undefined) ? rowData[index] : ""; 
+                            tr.appendChild(td);
+                        });
+                        body.appendChild(tr);
+                    }
+                }
+
+                // 3. Activer DataTables (Pagination + Recherche)
+                $('#monTableau').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' // Met tout en français
+                    },
+                    pageLength: 50, // Nombre de lignes par page par défaut
+                    lengthMenu: [10, 20, 50, 100], // Choix pour l'utilisateur
+                    order: [] // Pas de tri initial forcé
+                });
+
+                // 4. Afficher le tableau et cacher le chargement
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('monTableau').style.display = 'table';
+            }
 
         } catch (error) {
             console.error("Erreur:", error);
-            document.getElementById('loading').innerHTML = "<span style='color:red'>Erreur : Impossible de lire le fichier Excel. Vérifiez son nom.</span>";
+            document.getElementById('loading').innerHTML = "<span style='color:red'>Erreur de chargement. Vérifiez le fichier Excel.</span>";
         }
     }
 
