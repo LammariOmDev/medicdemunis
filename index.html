@@ -21,7 +21,6 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.1); 
         }
 
-        /* --- TON STYLE PERSONNALISÉ --- */
         h1 { 
             margin-bottom: 5px; 
             color: #2c3e50; 
@@ -36,22 +35,40 @@
             color: #7f8c8d; 
             margin-bottom: 25px; 
             font-style: italic;
+            border-bottom: 2px solid #3498db; 
             padding-bottom: 10px;
             display: inline-block;
         }
-		.signature a {
-            color: inherit; /* Garde la même couleur grise que le texte */
-            text-decoration: none; /* Enlève le soulignement par défaut */
-            font-weight: bold; /* Met le nom en gras */
-            transition: color 0.3s; /* Animation douce */
+
+        /* Lien Facebook */
+        .signature a {
+            color: inherit; 
+            text-decoration: none; 
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        .signature a:hover {
+            color: #3498db; 
         }
 
-        .signature a:hover {
-            color: #3498db; /* Devient bleu quand on passe la souris dessus */
+        /* --- NOUVEAU : Style du champ de recherche --- */
+        .dataTables_filter input {
+            border: 2px solid #3498db !important; /* Cadre bleu */
+            border-radius: 5px; /* Coins légèrement arrondis */
+            padding: 5px 10px;
+            background-color: #fcfcfc;
         }
-        /* Ajustements pour le tableau DataTables */
+        .dataTables_filter input:focus {
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.4); /* Halo lumineux bleu */
+            outline: none;
+        }
+        /* --------------------------------------------- */
+
+        /* Couleurs du tableau */
         table.dataTable thead { background-color: #3498db; color: white; }
-        .dataTables_wrapper { font-size: 14px; }
+        
+        /* Petit ajustement pour que le tableau soit joli */
+        .dataTables_wrapper { font-size: 14px; margin-top: 10px; }
         
         #loading { font-size: 18px; color: #666; text-align: center; padding: 20px; }
     </style>
@@ -60,11 +77,12 @@
 
 <div class="container">
     <h1>Médicaments Remboursables - Catégorie des plus Démunis</h1>
-    <div class="signature">By <a href="https://facebook.com/LammariOmDev" target="_blank">LammariOmDev</a></div>
+    
+    <div class="signature">By <a href="https://facebook.com/LammariOmDev" target="_blank">LammariOmDev®</a></div>
 
     <div id="loading">
         <div class="spinner-border text-primary" role="status"></div>
-        <br>Chargement et traitement des produits...
+        <br>Chargement et traitement des données...
     </div>
 
     <div class="table-responsive">
@@ -94,31 +112,24 @@
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Conversion en JSON (Objets) au lieu de HTML direct
-            // Cela nous permet de mieux contrôler les données pour la pagination
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
             if (jsonData.length > 0) {
-                // 1. Créer les en-têtes (La première ligne du Excel)
                 const headers = jsonData[0];
                 const headerRow = document.getElementById('table-headers');
                 headers.forEach(header => {
                     const th = document.createElement('th');
-                    th.textContent = header || "Colonne vide"; // Sécurité si titre vide
+                    th.textContent = header || "Colonne vide"; 
                     headerRow.appendChild(th);
                 });
 
-                // 2. Créer le corps du tableau (Toutes les autres lignes)
                 const body = document.getElementById('table-body');
-                // On commence à i=1 pour sauter la ligne des titres
                 for (let i = 1; i < jsonData.length; i++) {
                     const rowData = jsonData[i];
-                    // On vérifie que la ligne n'est pas totalement vide
                     if (rowData.length > 0) {
                         const tr = document.createElement('tr');
-                        headers.forEach((_, index) => { // On utilise l'index des headers pour aligner les colonnes
+                        headers.forEach((_, index) => { 
                             const td = document.createElement('td');
-                            // Si la case est vide, on met un texte vide
                             td.textContent = (rowData[index] !== undefined) ? rowData[index] : ""; 
                             tr.appendChild(td);
                         });
@@ -126,17 +137,15 @@
                     }
                 }
 
-                // 3. Activer DataTables (Pagination + Recherche)
                 $('#monTableau').DataTable({
                     language: {
-                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' // Met tout en français
+                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' 
                     },
-                    pageLength: 50, // Nombre de lignes par page par défaut
-                    lengthMenu: [10, 20, 50, 100], // Choix pour l'utilisateur
-                    order: [] // Pas de tri initial forcé
+                    pageLength: 20, 
+                    lengthMenu: [10, 20, 50, 100], 
+                    order: [] 
                 });
 
-                // 4. Afficher le tableau et cacher le chargement
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('monTableau').style.display = 'table';
             }
@@ -152,7 +161,3 @@
 
 </body>
 </html>
-
-
-
-
